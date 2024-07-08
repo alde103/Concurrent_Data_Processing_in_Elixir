@@ -8,9 +8,7 @@ defmodule Scraper.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      PageProducer,
-      PageConsumerSupervisor,
-      OnlinePageProducerConsumer
+      ScrapingPipeline
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

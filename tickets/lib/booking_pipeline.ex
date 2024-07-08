@@ -4,7 +4,8 @@ defmodule BookingsPipeline do
   @producer_config [
     queue: "bookings_queue",
     declare: [durable: true],
-    on_failure: :reject_and_requeue
+    on_failure: :reject_and_requeue,
+    qos: [prefetch_count: 100]
   ]
 
   def start_link(_args) do
@@ -15,9 +16,10 @@ defmodule BookingsPipeline do
         default: []
       ],
       batchers: [
-        cinema: [],
+        cinema: [batch_size: 75],
+        # defaults to :batch_size of 100
         musical: [],
-        default: []
+        default: [batch_size: 50]
       ]
     ]
 
@@ -57,8 +59,10 @@ defmodule BookingsPipeline do
 
     messages
     |> Tickets.insert_all_tickets()
-    |> Enum.each(fn %{data: %{user: user}} ->
-      Tickets.send_email(user)
+    |> Enum.each(fn message ->
+      channel = message.metadata.amqp_channel
+      payload = "email,#{message.data.user.email}"
+      AMQP.Basic.publish(channel, "", "notifications_queue", payload)
     end)
 
     messages
